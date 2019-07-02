@@ -16,6 +16,13 @@ if inputDirExists ~= true then
     error("golden directory does not exist")
 end
 
+-- this is an invalid image saved by PVR texture tool, make sure we fail the load
+local bad_ignore, shouldfail = image.load("input/bad_pvtt_ARGB1555_16x16.ktx")
+if shouldfail == true then
+    print("bad_pvtt_ARGB1555_16x16.ktx is an invalid file, we shouldn't load it but we did!")
+end
+
+
 -- load a png check size etc, save it as a bunch of different formats 
 do
     local test, okay = image.load("input/simple.png")
@@ -204,7 +211,7 @@ uncompressed_formats = {
   "B5G6R5_UNORM_PACK16",
   "R5G5B5A1_UNORM_PACK16",
   "B5G5R5A1_UNORM_PACK16",
---  "A1R5G5B5_UNORM_PACK16",
+  "A1R5G5B5_UNORM_PACK16", -- this looks wrong in pvr texture tool but passes the test... need to investigate further
   "R8_UNORM",
   "R8_SNORM",
   "R8_UINT",
@@ -408,7 +415,7 @@ do
                 local ri, gi, bi, ai = arti:getPixelAt(i)
                 local rg, gg, bg, ag = golden:getPixelAt(i)
 
-                if ri ~= rg or gi ~= gg or bi ~= bg or ai ~= ag then 
+                if approx(ri, rg) == false or approx(gi, gg) == false or approx(bi, bg) == false or approx(ai, ag) == false then 
                     print("Failed golden image pixel check for fmtcheck_" .. fmt .."_16x16.ktx <" .. x .. "," .. y .. ">")
                     print(string.format("(%f,%f,%f,%f) != (%f,%f,%f,%f)", ri, gi, bi, ai, rg, gg, bg, ag))
                     goto continue2

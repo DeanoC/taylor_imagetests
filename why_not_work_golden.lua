@@ -1,25 +1,50 @@
 -- Used to figure out why a golden image is borked put the broken ones in uncompressed_formats and debug away
 local image = require "image"
 local os = require "al2o3.os"
+local string = require "string"
+local table = require "table"
 
 uncompressed_formats = {
-	"R32G32_SFLOAT"
+	"A1R5G5B5_UNORM_PACK16"
 }
+function approx(a, b )
+    d = a - b
+    if d > 1e-5 or d < -1e-5 then
+        return false
+    else
+        return true
+    end
+end
 
 -- format checks
 do
     for i,fmt in ipairs(uncompressed_formats) do
-        local test, okay = image.createNoClear(16, 16, 1, 1, fmt)
+        local test, okay = image.create2D(16, 16, fmt)
         if okay ~= true then
-            print("unable to be create image")
+            print("unable to be create image 16x16 " .. fmt)
+            goto stop
+        end
+
+        local fmt_split={}
+        for str in string.gmatch(fmt, "([^_]+)") do
+            table.insert(fmt_split, str)
+        end
+        local a = 1.0
+        if string.find(fmt_split[1], "A") == nil then 
+            a = 0.0
         end
 
         for y = 0, 15 do
             for x = 0, 15 do
-                local i = test:calculateIndex(x, y,0,0)
-                test:setPixelAt(i, x/15.0, y/15.0, x/15.0, 1.0)
+				local i = test:calculateIndex(x, y, 0, 0)
+
+				local r = x / 15.0 
+				local g = y / 15.0
+				local b = x / 15.0
+                test:setPixelAt(i, r, g, b, a)
             end
         end
+
         test:saveAsKTX("artifacts/borked_fmtcheck_" .. fmt .."_16x16.ktx")
     end
     
@@ -49,25 +74,28 @@ do
             print("Failed golden image format check for fmtcheck_" .. fmt .."_16x16.ktx")
             goto continue
         end
+
         if flagsi.Cubemap ~= flagsg.Cubemap then
             print("Failed golden image cubemap check for fmtcheck_" .. fmt .."_16x16.ktx")
             goto continue
         end
 
+	    for y = 0, 15 do
+	        for x = 0, 15 do
+                local i = golden:calculateIndex(x, y, 0, 0)
+	            local ri, gi, bi, ai = arti:getPixelAt(i)
+	            local rg, gg, bg, ag = golden:getPixelAt(i)
 
-    for y = 0, 15 do
-        for x = 0, 15 do
-            local i = y * 16 + x
-            local ri, gi, bi , ai = arti:getPixelAt(i)
-            local rg, gg, bg , ag = golden:getPixelAt(i)
-            if ri ~= rg or gi ~= gg or bi ~= bg or ai ~= ag then 
-            print("Failed golden image cubemap check for fmtcheck_" .. fmt .."_16x16.ktx <" .. x .. "," .. y .. ">")
-            end
-        end
-    end
-
+                if approx(ri, rg) == false or approx(gi, gg) == false or approx(bi, bg) == false or approx(ai, ag) == false then 
+                    print("Failed golden image pixel check for fmtcheck_" .. fmt .."_16x16.ktx <" .. x .. "," .. y .. ">")
+                    print(string.format("(%f,%f,%f,%f) != (%f,%f,%f,%f)", ri, gi, bi, ai, rg, gg, bg, ag))
+	            end
+	        end
+	    end
         ::continue::
     end
+
+    ::stop::
 end
 
 
