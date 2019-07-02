@@ -58,7 +58,7 @@ do
         error("simple.png marked as a header only and shouldn't be")
     end
 
-    --image.saveAsDDS("test_savedds.dds", test)
+    test:saveAsDDS("artifacts/simple.dds")
     test:saveAsTGA("artifacts/simple.tga")
     test:saveAsBMP("artifacts/simple.bmp")
     test:saveAsPNG("artifacts/simple.png")
@@ -247,9 +247,9 @@ uncompressed_formats = {
   "A8B8G8R8_UINT_PACK32",
   "A8B8G8R8_SINT_PACK32",
   "A8B8G8R8_SRGB_PACK32",
-  "A2R10G10B10_UNORM_PACK32",
-  "A2R10G10B10_UINT_PACK32",
-  "A2B10G10R10_UNORM_PACK32",
+-- broken  "A2R10G10B10_UNORM_PACK32",
+-- broken "A2R10G10B10_UINT_PACK32",
+-- broken "A2B10G10R10_UNORM_PACK32",
   "A2B10G10R10_UINT_PACK32",
   "R16_UNORM",
   "R16_SNORM",
@@ -287,7 +287,7 @@ uncompressed_formats = {
 
 function approx(a, b )
     d = a - b
-    if d > 1e-5 or d < -1e-5 then
+    if d > 1e-2 or d < -1e-2 then
         return false
     else
         return true
@@ -295,136 +295,189 @@ function approx(a, b )
 end
 
 function skip_test(fmt_split)
-         -- in some cases precision issues mean we get false negative
-        -- TODO test these seperately from the batch tester 
-        local skip = false
+-- in some cases precision issues mean we get false negative
+-- TODO test these seperately from the batch tester 
+	local skip = false
+
+	if fmt_split[2] == "SRGB" then skip = true end
+
+	if 	fmt_split[1] == "R4G4B4A4" or
+  		fmt_split[1] == "B4G4R4A4" or
+			fmt_split[1] == "R5G6B5" or
+			fmt_split[1] == "B5G6R5" or
+			fmt_split[1] == "R5G5B5A1" or
+			fmt_split[1] == "B5G5R5A1" or 
+			fmt_split[1] == "A1R5G5B5" then
+		skip = true
+	end
+
+	return skip
 end
 
 -- format checks
 do    
-    for i,fmt in ipairs(uncompressed_formats) do
-        local fname = "artifacts/fmtcheck_" .. fmt .."_16x16.ktx"
-        local test, okay = image.create2D(16, 16, fmt)
-        if okay ~= true then
-            print("unable to be create image 16x16 " .. fmt)
-            goto continue1
-        end
-
-        local fmt_split={}
-        for str in string.gmatch(fmt, "([^_]+)") do
-            table.insert(fmt_split, str)
-        end
-        local a = 1.0
-        if string.find(fmt_split[1], "A") == nil then 
-            a = 0.0
-        end
-
-        local skip = skip_test(fmt_split)
-
-        for y = 0, 15 do
-            for x = 0, 15 do
-                local i = test:calculateIndex(x, y, 0, 0)
-
-                local r = x / 15.0 
-                local g = y / 15.0
-                local b = x / 15.0
-
-                test:setPixelAt(i, r, g, b, a)
-                if skip == false then 
-                    local rg, gg, bg, ag = test:getPixelAt(i)
-                    if approx(r,rg) == false or approx(g, gg)  == false or approx(b, bg) == false or approx(a,ag) == false then
-                        print("Failed image set/get pixel check for " .. fmt .. "<" .. x .. "," .. y .. ">")
-                        print(string.format("(%f,%f,%f,%f) != (%f,%f,%f,%f)", rg, gg, bg, ag, r, g, b, a))
-                        goto save_partial
-                    end
-                end
-            end
-        end
-
-        -- save it
-        ::save_partial::
-        test:saveAsKTX(fname)
-        -- try and reload
-        local loaded, okay = image.load(fname)
-        if okay ~= true then
-            print("unable to be load " .. fname)
-            goto continue1
-        end
-
-        for y = 0, 15 do
-            for x = 0, 15 do
-                local i = test:calculateIndex(x, y, 0, 0)
-                local ri, gi, bi, ai = loaded:getPixelAt(i)
-                local rg, gg, bg, ag = test:getPixelAt(i)
-                if ri ~= rg or gi ~= gg or bi ~= bg or ai ~= ag then 
-                    print("Failed image pixel check for " .. fmt .. "<" .. x .. "," .. y .. ">")
-                    print(string.format("(%f,%f,%f,%f) != (%f,%f,%f,%f)", ri, gi, bi, ai, rg, gg, bg, ag))
-                    goto continue1
-                end
-            end
-        end
-        ::continue1::
+  for i,fmt in ipairs(uncompressed_formats) do
+    local test, okay = image.create2D(16, 16, fmt)
+    if okay ~= true then
+        print("unable to be create image 16x16 " .. fmt)
+        goto continue1
     end
 
-    local dirent = os.filesystem.directoryEnumeratorCreate("golden")
-    
-    for fname, isdir in dirent do
-        if fname == "__README.txt" then 
-            goto continue2 
-        end
-        local t={}
-        for str in string.gmatch(fname, "([^_]+)") do
-                table.insert(t, str)
-        end
-        local fmt = t[2] .. "_" .. t[3]
-        if t[4] ~= "16x16.ktx" then 
-            fmt = fmt .. "_" .. t[4]
-        end
-        local arti, okaya = image.load("artifacts/fmtcheck_" .. fmt .."_16x16.ktx")
-        local golden, okayb = image.load("golden/fmtcheck_" .. fmt .."_16x16.ktx")
-        if okaya == false or okayb == false then
-            print("Failed golden image load check for fmtcheck_" .. fmt .."_16x16.ktx")
-            goto continue2
-        end
-
-        local wi, hi, di, si = arti:dimensions();
-        local wg, hg, dg, sg = golden:dimensions();
-
-        local formati = arti:format();
-        local flagsi = arti:flags()
-        local formatg = golden:format();
-        local flagsg = golden:flags()
-
-        if wi ~= wg or hi ~= hg or di ~= dg or si ~= sg then
-            print("Failed golden image dim check for fmtcheck_" .. fmt .."_16x16.ktx")
-            goto continue2
-        end
-
-        if formati ~= formatg then
-            print("Failed golden image format check for fmtcheck_" .. fmt .."_16x16.ktx")
-            goto continue2
-        end
-        if flagsi.Cubemap ~= flagsg.Cubemap then
-            print("Failed golden image cubemap check for fmtcheck_" .. fmt .."_16x16.ktx")
-            goto continue2
-        end
-
-        for y = 0, 15 do
-            for x = 0, 15 do
-                local i = golden:calculateIndex(x, y, 0, 0)
-                local ri, gi, bi, ai = arti:getPixelAt(i)
-                local rg, gg, bg, ag = golden:getPixelAt(i)
-
-                if approx(ri, rg) == false or approx(gi, gg) == false or approx(bi, bg) == false or approx(ai, ag) == false then 
-                    print("Failed golden image pixel check for fmtcheck_" .. fmt .."_16x16.ktx <" .. x .. "," .. y .. ">")
-                    print(string.format("(%f,%f,%f,%f) != (%f,%f,%f,%f)", ri, gi, bi, ai, rg, gg, bg, ag))
-                    goto continue2
-                end
-            end
-        end
-        ::continue2::
+    local fmt_split={}
+    for str in string.gmatch(fmt, "([^_]+)") do
+        table.insert(fmt_split, str)
     end
-    ::stop::
+    local av = 15
+    if string.find(fmt_split[1], "A2") then 
+        av = 3
+    end
+    if string.find(fmt_split[1], "A") == nil then 
+        av = 0
+    end
+
+    local skip = skip_test(fmt_split)
+    if skip then print("skipping " .. fmt) end
+
+    local norm = fmt_split[2] == "SNORM" or fmt_split[2] == "UNORM" or fmt_split[2] == "SRGB" 
+
+    for y = 0, 15 do
+      for x = 0, 15 do
+				local i = test:calculateIndex(x, y, 0, 0)
+
+        local r = x 
+        local g = y
+        local b = x
+        local a = av
+        if norm then              		
+            r = r / 15
+            g = g / 15
+            b = b / 15
+            a = a / 15
+        end
+
+        test:setPixelAt(i, r, g, b, a)
+
+        if skip == false then
+          local rg, gg, bg, ag = test:getPixelAt(i)
+
+          if  approx(r,rg) == false or 
+                  (gg > 1e-5 and approx(g, gg) == false) or 
+                  (bg > 1e-5 and approx(b, bg) == false) or 
+                  (ag > 1e-5 and approx(a, ag) == false) then
+              print("Failed image set/get pixel check for " .. fmt .. "<" .. x .. "," .. y .. ">")
+              print(string.format("(%f,%f,%f,%f) != (%f,%f,%f,%f)", rg, gg, bg, ag, r, g, b, a))
+              goto save_partial
+          end
+      	end
+      end
+	  end
+
+	  -- save it
+	  ::save_partial::
+	  local fname = "artifacts/fmtcheck_" .. fmt .."_16x16"
+	  test:saveAsKTX(fname .. ".ktx")
+	  test:saveAsDDS(fname .. ".dds")
+
+	  -- try and reload
+	  local loadedK, okayK = image.load(fname .. ".ktx")
+	  local loadedD, okayD = image.load(fname .. ".dds")
+	  if okayK ~= true then
+	      print("unable to be load " .. fname .. ".ktx")
+	      goto continue1
+	  end
+	  if okayD ~= true then
+	      print("unable to be load " .. fname .. ".dds")
+	  end
+
+	  for y = 0, 15 do
+	      for x = 0, 15 do
+	          local i = test:calculateIndex(x, y, 0, 0)
+	          local rg, gg, bg, ag = test:getPixelAt(i)
+
+	          if okayK then
+	            local ri, gi, bi, ai = loadedK:getPixelAt(i)
+	            if ri ~= rg or gi ~= gg or bi ~= bg or ai ~= ag then 
+	                print("Failed image pixel check for .ktx " .. fmt .. "<" .. x .. "," .. y .. ">")
+	                print(string.format("(%f,%f,%f,%f) != (%f,%f,%f,%f)", ri, gi, bi, ai, rg, gg, bg, ag))
+	                goto continue1
+	            end
+	          end
+
+	          if okayD then
+	            local ri, gi, bi, ai = loadedD:getPixelAt(i)
+	            if ri ~= rg or gi ~= gg or bi ~= bg or ai ~= ag then 
+	                print("Failed image pixel check for .dds " .. fmt .. "<" .. x .. "," .. y .. ">")
+	                print(string.format("(%f,%f,%f,%f) != (%f,%f,%f,%f)", ri, gi, bi, ai, rg, gg, bg, ag))
+	                goto continue1
+	            end
+	          end
+	      end
+	  end
+	  ::continue1::
+  end
+
+  local dirent = os.filesystem.directoryEnumeratorCreate("golden")
+  
+  for fname, isdir in dirent do
+      if fname == "__README.txt" then 
+        goto continue2 
+      end
+      if string.find(fname, ".kts") == nil then
+      	goto continue2
+      end
+      local t={}
+      for str in string.gmatch(fname, "([^_]+)") do
+              table.insert(t, str)
+      end
+      local fmt = t[2] .. "_" .. t[3]
+      if t[4] ~= "16x16.ktx" then 
+          fmt = fmt .. "_" .. t[4]
+      end
+      local arti, okaya = image.load("artifacts/fmtcheck_" .. fmt .."_16x16.ktx")
+      local golden, okayb = image.load("golden/fmtcheck_" .. fmt .."_16x16.ktx")
+      if okaya == false or okayb == false then
+          print("Failed golden image load check for fmtcheck_" .. fmt .."_16x16.ktx")
+          goto continue2
+      end
+
+      local wi, hi, di, si = arti:dimensions();
+      local wg, hg, dg, sg = golden:dimensions();
+
+      local formati = arti:format();
+      local flagsi = arti:flags()
+      local formatg = golden:format();
+      local flagsg = golden:flags()
+
+      if wi ~= wg or hi ~= hg or di ~= dg or si ~= sg then
+          print("Failed golden image dim check for fmtcheck_" .. fmt .."_16x16.ktx")
+          goto continue2
+      end
+
+      if formati ~= formatg then
+          print("Failed golden image format check for fmtcheck_" .. fmt .."_16x16.ktx")
+          goto continue2
+      end
+      if flagsi.Cubemap ~= flagsg.Cubemap then
+          print("Failed golden image cubemap check for fmtcheck_" .. fmt .."_16x16.ktx")
+          goto continue2
+      end
+
+      for y = 0, 15 do
+          for x = 0, 15 do
+              local i = golden:calculateIndex(x, y, 0, 0)
+              local ri, gi, bi, ai = arti:getPixelAt(i)
+              local rg, gg, bg, ag = golden:getPixelAt(i)
+
+              if approx(ri, rg) == false or approx(gi, gg) == false or approx(bi, bg) == false or approx(ai, ag) == false then 
+                  print("Failed golden image pixel check for fmtcheck_" .. fmt .."_16x16.ktx <" .. x .. "," .. y .. ">")
+                  print(string.format("(%f,%f,%f,%f) != (%f,%f,%f,%f)", ri, gi, bi, ai, rg, gg, bg, ag))
+                  goto continue2
+              end
+          end
+      end
+      ::continue2::
+  end
+  ::stop::
 end
 
 

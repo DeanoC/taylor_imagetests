@@ -5,7 +5,7 @@ local string = require "string"
 local table = require "table"
 
 uncompressed_formats = {
-	"A8B8G8R8_SINT_PACK32"
+	"R16G16_SFLOAT"
 }
 function approx(a, b )
     d = a - b
@@ -34,14 +34,31 @@ do
             a = 0.0
         end
 
+        local norm = fmt_split[2] == "SNORM" or fmt_split[2] == "UNORM"
+
         for y = 0, 15 do
             for x = 0, 15 do
 				local i = test:calculateIndex(x, y, 0, 0)
 
-				local r = x / 15.0 
-				local g = y / 15.0
-				local b = x / 15.0
+                local r = x 
+                local g = y
+                local b = x
+                if norm then
+                    r = r / 15
+                    g = g / 15
+                    b = b / 15
+                end
                 test:setPixelAt(i, r, g, b, a)
+
+                local rg, gg, bg, ag = test:getPixelAt(i)
+
+                if  approx(r,rg) == false or 
+                        (gg > 1e-3 and approx(g, gg) == false) or 
+                        (bg > 1e-3 and approx(b, bg) == false) or 
+                        (ag > 1e-3 and approx(a, ag) == false) then
+                    print("Failed image set/get pixel check for " .. fmt .. "<" .. x .. "," .. y .. ">")
+                    print(string.format("(%f,%f,%f,%f) != (%f,%f,%f,%f)", rg, gg, bg, ag, r, g, b, a))
+                end
             end
         end
 
