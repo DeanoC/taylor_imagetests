@@ -4,7 +4,7 @@ local os = require "al2o3.os"
 local string = require "string"
 local table = require "table"
 
-local test, okay = image.load("input/pvtt_ARGB1555_16x16.ktx")
+local test, okay = image.load("artifacts/fmtcheck_R8_SRGB_16x16.ktx")
 if okay == false then
     print("failed to to load the image")
     goto continue

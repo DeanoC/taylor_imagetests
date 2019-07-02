@@ -5,7 +5,7 @@ local string = require "string"
 local table = require "table"
 
 uncompressed_formats = {
-	"A1R5G5B5_UNORM_PACK16"
+	"A8B8G8R8_SINT_PACK32"
 }
 function approx(a, b )
     d = a - b
@@ -53,7 +53,7 @@ do
         local golden, okayb = image.load("golden/fmtcheck_" .. fmt .."_16x16.ktx")
 
         if okaya == false or okayb == false then
-            print("Failed golden image load check for fmtcheck_" .. fmt .."_16x16.ktx")
+            print("** Failed golden image load check for fmtcheck_" .. fmt .."_16x16.ktx")
             goto continue
         end
 
@@ -66,17 +66,17 @@ do
         local flagsg = golden:flags()
 
         if wi ~= wg or hi ~= hg or di ~= dg or si ~= sg then
-            print("Failed golden image dim check for fmtcheck_" .. fmt .."_16x16.ktx")
+            print("** Failed golden image dim check for fmtcheck_" .. fmt .."_16x16.ktx")
             goto continue
         end
 
         if formati ~= formatg then
-            print("Failed golden image format check for fmtcheck_" .. fmt .."_16x16.ktx")
+            print("** Failed golden image format check for fmtcheck_" .. fmt .."_16x16.ktx")
             goto continue
         end
 
         if flagsi.Cubemap ~= flagsg.Cubemap then
-            print("Failed golden image cubemap check for fmtcheck_" .. fmt .."_16x16.ktx")
+            print("** Failed golden image cubemap check for fmtcheck_" .. fmt .."_16x16.ktx")
             goto continue
         end
 
@@ -87,7 +87,7 @@ do
 	            local rg, gg, bg, ag = golden:getPixelAt(i)
 
                 if approx(ri, rg) == false or approx(gi, gg) == false or approx(bi, bg) == false or approx(ai, ag) == false then 
-                    print("Failed golden image pixel check for fmtcheck_" .. fmt .."_16x16.ktx <" .. x .. "," .. y .. ">")
+                    print("** Failed golden image pixel check for fmtcheck_" .. fmt .."_16x16.ktx <" .. x .. "," .. y .. ">")
                     print(string.format("(%f,%f,%f,%f) != (%f,%f,%f,%f)", ri, gi, bi, ai, rg, gg, bg, ag))
 	            end
 	        end
