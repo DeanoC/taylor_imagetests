@@ -9,7 +9,7 @@ if inputDirExists ~= true then
 end
 local inputDirExists = os.filesystem.dirExists("artifacts")
 if inputDirExists ~= true then
-    error("artifacts directory does not exist")
+	os.filesystem.dirCreate("artifacts")
 end
 local inputDirExists = os.filesystem.dirExists("golden")
 if inputDirExists ~= true then
