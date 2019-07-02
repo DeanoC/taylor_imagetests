@@ -1,0 +1,1 @@
+This folder contains various input file to test loaders etc.
