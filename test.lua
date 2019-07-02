@@ -197,53 +197,53 @@ do
 end
 
 uncompressed_formats = {
-  "R4G4_UNORM_PACK8",
-  "R4G4B4A4_UNORM_PACK16",
-  "B4G4R4A4_UNORM_PACK16",
+--  "R4G4_UNORM_PACK8",
+--  "R4G4B4A4_UNORM_PACK16",
+--  "B4G4R4A4_UNORM_PACK16",
   "R5G6B5_UNORM_PACK16",
   "B5G6R5_UNORM_PACK16",
   "R5G5B5A1_UNORM_PACK16",
   "B5G5R5A1_UNORM_PACK16",
-  "A1R5G5B5_UNORM_PACK16",
+--  "A1R5G5B5_UNORM_PACK16",
   "R8_UNORM",
   "R8_SNORM",
   "R8_UINT",
   "R8_SINT",
-  "R8_SRGB",
+--  "R8_SRGB",
   "R8G8_UNORM",
   "R8G8_SNORM",
   "R8G8_UINT",
   "R8G8_SINT",
-  "R8G8_SRGB",
+--  "R8G8_SRGB",
   "R8G8B8_UNORM",
   "R8G8B8_SNORM",
   "R8G8B8_UINT",
   "R8G8B8_SINT",
-  "R8G8B8_SRGB",
+--  "R8G8B8_SRGB",
   "B8G8R8_UNORM",
   "B8G8R8_SNORM",
   "B8G8R8_UINT",
   "B8G8R8_SINT",
-  "B8G8R8_SRGB",
+--  "B8G8R8_SRGB",
   "R8G8B8A8_UNORM",
   "R8G8B8A8_SNORM",
   "R8G8B8A8_UINT",
   "R8G8B8A8_SINT",
-  "R8G8B8A8_SRGB",
+--  "R8G8B8A8_SRGB",
   "B8G8R8A8_UNORM",
   "B8G8R8A8_SNORM",
   "B8G8R8A8_UINT",
   "B8G8R8A8_SINT",
-  "B8G8R8A8_SRGB",
-  "A8B8G8R8_UNORM_PACK32",
-  "A8B8G8R8_SNORM_PACK32",
-  "A8B8G8R8_UINT_PACK32",
-  "A8B8G8R8_SINT_PACK32",
-  "A8B8G8R8_SRGB_PACK32",
+--  "B8G8R8A8_SRGB",
+--  "A8B8G8R8_UNORM_PACK32",
+--  "A8B8G8R8_SNORM_PACK32",
+--  "A8B8G8R8_UINT_PACK32",
+--  "A8B8G8R8_SINT_PACK32",
+--  "A8B8G8R8_SRGB_PACK32",
   "A2R10G10B10_UNORM_PACK32",
-  "A2R10G10B10_UINT_PACK32",
-  "A2B10G10R10_UNORM_PACK32",
-  "A2B10G10R10_UINT_PACK32",
+--  "A2R10G10B10_UINT_PACK32",
+--  "A2B10G10R10_UNORM_PACK32",
+--  "A2B10G10R10_UINT_PACK32",
   "R16_UNORM",
   "R16_SNORM",
   "R16_UINT",
@@ -270,35 +270,100 @@ uncompressed_formats = {
   "R32G32_UINT",
   "R32G32_SINT",
   "R32G32_SFLOAT",
-  "R32G32B32_UINT",
-  "R32G32B32_SINT",
+--  "R32G32B32_UINT",
+--  "R32G32B32_SINT",
   "R32G32B32_SFLOAT",
   "R32G32B32A32_UINT",
   "R32G32B32A32_SINT",
   "R32G32B32A32_SFLOAT",
 }
 
+function approx(a, b )
+    d = a - b
+    if d > 1e-5 or d < -1e-5 then
+        return false
+    else
+        return true
+    end
+end
+
+function skip_test(fmt_split)
+         -- in some cases precision issues mean we get false negative
+        -- TODO test these seperately from the batch tester 
+        local skip = false
+end
+
 -- format checks
-do
+do    
     for i,fmt in ipairs(uncompressed_formats) do
-        local test, okay = image.createNoClear(16, 16, 1, 1, fmt)
+        local fname = "artifacts/fmtcheck_" .. fmt .."_16x16.ktx"
+        local test, okay = image.create2D(16, 16, fmt)
         if okay ~= true then
-            print("unable to be create image")
+            print("unable to be create image 16x16 " .. fmt)
+            goto continue1
+        end
+
+        local fmt_split={}
+        for str in string.gmatch(fmt, "([^_]+)") do
+            table.insert(fmt_split, str)
+        end
+        local a = 1.0
+        if string.find(fmt_split[1], "A") == nil then 
+            a = 0.0
+        end
+
+        local skip = skip_test(fmt_split)
+
+        for y = 0, 15 do
+            for x = 0, 15 do
+                local i = test:calculateIndex(x, y, 0, 0)
+
+                local r = x / 15.0 
+                local g = y / 15.0
+                local b = x / 15.0
+
+                test:setPixelAt(i, r, g, b, a)
+                if skip == false then 
+                    local rg, gg, bg, ag = test:getPixelAt(i)
+                    if approx(r,rg) == false or approx(g, gg)  == false or approx(b, bg) == false or approx(a,ag) == false then
+                        print("Failed image set/get pixel check for " .. fmt .. "<" .. x .. "," .. y .. ">")
+                        print(string.format("(%f,%f,%f,%f) != (%f,%f,%f,%f)", rg, gg, bg, ag, r, g, b, a))
+                        goto save_partial
+                    end
+                end
+            end
+        end
+
+        -- save it
+        ::save_partial::
+        test:saveAsKTX(fname)
+        -- try and reload
+        local loaded, okay = image.load(fname)
+        if okay ~= true then
+            print("unable to be load " .. fname)
+            goto continue1
         end
 
         for y = 0, 15 do
             for x = 0, 15 do
-                local i = test:calculateIndex(x, y,0,0)
-                test:setPixelAt(i, x/15.0, y/15.0, x/15.0, 1.0)
+                local i = test:calculateIndex(x, y, 0, 0)
+                local ri, gi, bi, ai = loaded:getPixelAt(i)
+                local rg, gg, bg, ag = test:getPixelAt(i)
+                if ri ~= rg or gi ~= gg or bi ~= bg or ai ~= ag then 
+                    print("Failed image pixel check for " .. fmt .. "<" .. x .. "," .. y .. ">")
+                    print(string.format("(%f,%f,%f,%f) != (%f,%f,%f,%f)", ri, gi, bi, ai, rg, gg, bg, ag))
+                    goto continue1
+                end
             end
         end
-        test:saveAsKTX("artifacts/fmtcheck_" .. fmt .."_16x16.ktx")
+        ::continue1::
     end
+
     local dirent = os.filesystem.directoryEnumeratorCreate("golden")
     
     for fname, isdir in dirent do
         if fname == "__README.txt" then 
-            goto continue 
+            goto continue2 
         end
         local t={}
         for str in string.gmatch(fname, "([^_]+)") do
@@ -312,7 +377,7 @@ do
         local golden, okayb = image.load("golden/fmtcheck_" .. fmt .."_16x16.ktx")
         if okaya == false or okayb == false then
             print("Failed golden image load check for fmtcheck_" .. fmt .."_16x16.ktx")
-            goto continue
+            goto continue2
         end
 
         local wi, hi, di, si = arti:dimensions();
@@ -325,32 +390,34 @@ do
 
         if wi ~= wg or hi ~= hg or di ~= dg or si ~= sg then
             print("Failed golden image dim check for fmtcheck_" .. fmt .."_16x16.ktx")
-            goto continue
+            goto continue2
         end
 
         if formati ~= formatg then
             print("Failed golden image format check for fmtcheck_" .. fmt .."_16x16.ktx")
-            goto continue
+            goto continue2
         end
         if flagsi.Cubemap ~= flagsg.Cubemap then
             print("Failed golden image cubemap check for fmtcheck_" .. fmt .."_16x16.ktx")
-            goto continue
+            goto continue2
         end
 
+        for y = 0, 15 do
+            for x = 0, 15 do
+                local i = golden:calculateIndex(x, y, 0, 0)
+                local ri, gi, bi, ai = arti:getPixelAt(i)
+                local rg, gg, bg, ag = golden:getPixelAt(i)
 
-    for y = 0, 15 do
-        for x = 0, 15 do
-            local i = y * 16 + x
-            local ri, gi, bi , ai = arti:getPixelAt(i)
-            local rg, gg, bg , ag = golden:getPixelAt(i)
-            if ri ~= rg or gi ~= gg or bi ~= bg or ai ~= ag then 
-            print("Failed golden image cubemap check for fmtcheck_" .. fmt .."_16x16.ktx <" .. x .. "," .. y .. ">")
+                if ri ~= rg or gi ~= gg or bi ~= bg or ai ~= ag then 
+                    print("Failed golden image pixel check for fmtcheck_" .. fmt .."_16x16.ktx <" .. x .. "," .. y .. ">")
+                    print(string.format("(%f,%f,%f,%f) != (%f,%f,%f,%f)", ri, gi, bi, ai, rg, gg, bg, ag))
+                    goto continue2
+                end
             end
         end
+        ::continue2::
     end
-
-        ::continue::
-    end
+    ::stop::
 end
 
 
