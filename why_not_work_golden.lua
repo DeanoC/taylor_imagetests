@@ -5,7 +5,7 @@ local string = require "string"
 local table = require "table"
 
 uncompressed_formats = {
-	"R16G16_SFLOAT"
+	"R8_SNORM"
 }
 function approx(a, b )
     d = a - b

@@ -284,7 +284,9 @@ uncompressed_formats = {
   "R32G32B32A32_SINT",
   "R32G32B32A32_SFLOAT",
 }
-
+--uncompressed_formats = {
+--  "B8G8R8A8_UNORM",
+--}
 function approx(a, b )
     d = a - b
     if d > 1e-2 or d < -1e-2 then
@@ -377,6 +379,7 @@ do
 	  local fname = "artifacts/fmtcheck_" .. fmt .."_16x16"
 	  test:saveAsKTX(fname .. ".ktx")
 	  test:saveAsDDS(fname .. ".dds")
+      if skip == true then goto continue1 end
 
 	  -- try and reload
 	  local loadedK, okayK = image.load(fname .. ".ktx")
@@ -399,6 +402,7 @@ do
 	            if ri ~= rg or gi ~= gg or bi ~= bg or ai ~= ag then 
 	                print("Failed image pixel check for .ktx " .. fmt .. "<" .. x .. "," .. y .. ">")
 	                print(string.format("(%f,%f,%f,%f) != (%f,%f,%f,%f)", ri, gi, bi, ai, rg, gg, bg, ag))
+                    print("test fmt = " .. test:format() .. " Ktx loaded formated = " .. loadedK:format())
 	                goto continue1
 	            end
 	          end
@@ -408,6 +412,7 @@ do
 	            if ri ~= rg or gi ~= gg or bi ~= bg or ai ~= ag then 
 	                print("Failed image pixel check for .dds " .. fmt .. "<" .. x .. "," .. y .. ">")
 	                print(string.format("(%f,%f,%f,%f) != (%f,%f,%f,%f)", ri, gi, bi, ai, rg, gg, bg, ag))
+                    print("test fmt = " .. test:format() .. " DDS loaded formated = " .. loadedD:format())
 	                goto continue1
 	            end
 	          end
