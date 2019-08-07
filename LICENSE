@@ -1,7 +1,11 @@
 The input/testimages is from the official Khronos ktxlib tests and all
-files are under the input/testimages/LICENSE.
+files are under the input/testimages/LICENSE.md
 
-Except for the input/testimages folder this is released under the 
+The input/openil-dds-testimages are from 
+https://sourceforge.net/p/openil/svn/1536/tree/trunk/Test%20Images/DDS/
+and are I believe GPL or LGPL v2 licensed
+
+Except for the those this is released under the 
 following license
 
 This is free and unencumbered software released into the public domain.
