@@ -37,7 +37,7 @@ function ImageLoadAndSimpleCheck(prefix, fname, expected_width, expected_height,
 
     local test, okay = image.load(filename)
     if okay ~= true then
-        error("Could not load " .. filename)
+        print("Could not load " .. filename)
         return nil
     end
 
@@ -71,22 +71,8 @@ function ImageLoadAndSimpleCheck(prefix, fname, expected_width, expected_height,
 
     return test
 end
---[[
-local fname = "DDS_x4r4g4b4"
-local loadpath = "input/openil-dds-testimages/" .. fname
-local savepath = "artifacts/" .. fname
-local test, okay = image.load(loadpath .. ".dds")
-if okay then
-    test:saveAsKTX(savepath .. ".ktx")
-    test:saveAsDDS(savepath .. ".dds")
-else
-    print("Failed to load " .. loadpath .. ".dds")
-end
-]]--
 require "ddsimagetests"
---[[
 require "ktximagechecks"
 require "miscchecks"
 require "setpixelchecks"
 require "formatchecks"
-]]--

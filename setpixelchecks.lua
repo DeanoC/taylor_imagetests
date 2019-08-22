@@ -15,14 +15,17 @@ do
         for x = 0, 15 do
             local i = y * 16 + x
             local r, g, b , a = test:getPixelAt(i)
-            if r ~= x/15.0 or g ~= y/15.0 or b ~= x/15.0 or a ~= 1.0 then 
+            if not approx(r, x/15.0, 1e-5) or  not approx(g, y/15.0, 1e-5) or not approx(b, x/15.0, 1e-5) or not approx(a, 1.0, 1e-5) then 
                 print("create2D get pixel failed <" .. x .. "," .. y .. ">")
+                print(r .. "," .. g .. "," .. b .. "," .. a)
+                print(x/15.0 .. "," .. y/15.0 .. "," .. x/15.0 .. "," .. 1.0)
+                goto fail
             end
         end
     end
     test:saveAsKTX("artifacts/setpixel_rgba8_16x16.ktx")
+::fail::
 end
-
 -- load 16x16 ktx with mipmaps from PVR Texture Tool, save as png and ktx
 do
     local test, okay = image.load("input/pvtt_rgba8_mm_16x16.ktx")
@@ -55,16 +58,16 @@ do
         for x = 1, 256 do
             local i = (y-1) * 256 + (x-1)
             local r, g, b, a = loadtest:getPixelAt(i)
-            if(r ~= (x-1.0)/255.0) then
+            if not approx(r, (x-1.0)/255.0, 1e-5) then
                 print( x .. ", " .. y .. ": " .. r .. " red incorrect in setpixel_rgba8_256x256.png")
             end
-            if(g ~= (y-1.0)/255.0) then
+            if not approx(g, (y-1.0)/255.0, 1e-5) then
                 print( x .. ", " .. y .. ": " .. g .. " green incorrect in setpixel_rgba8_256x256.png")
             end
-            if(b ~= (x-1.0)/255.0) then
+            if not approx(b, (x-1.0)/255.0, 1e-5) then
                 print( x .. ", " .. y .. ": " .. b .. " blue incorrect in setpixel_rgba8_256x256.png")
             end
-            if(a ~= (y-1.0)/255.0) then
+            if not approx(a, (y-1.0)/255.0, 1e-5) then
                 print( x .. ", " .. y .. ": " .. a .. " alpha incorrect in setpixel_rgba8_256x256.png")
             end
         end
@@ -75,16 +78,16 @@ do
             local i = loadtest:calculateIndex(x-1,y-1, 0, 0)
 
             local r, g, b, a = loadtest:getPixelAt(i)
-            if(r ~= (x-1.0)/255.0) then
+            if not approx(r, (x-1.0)/255.0, 1e-5) then
                 print( x .. ", " .. y .. ": " .. r .. " red incorrect in calculateIndex test")
             end
-            if(g ~= (y-1.0)/255.0) then
+            if not approx(g, (y-1.0)/255.0, 1e-5) then
                 print( x .. ", " .. y .. ": " .. g .. " green incorrect in calculateIndex test")
             end
-            if(b ~= (x-1.0)/255.0) then
+            if not approx(b, (x-1.0)/255.0, 1e-5) then
                 print( x .. ", " .. y .. ": " .. b .. " blue incorrect in calculateIndex test")
             end
-            if(a ~= (y-1.0)/255.0) then
+            if not approx(a, (y-1.0)/255.0, 1e-5) then
                 print( x .. ", " .. y .. ": " .. a .. " alpha incorrect in calculateIndex test")
             end
         end
